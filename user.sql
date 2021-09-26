@@ -1,0 +1,18 @@
+CREATE ROLE "Aladin" WITH
+	LOGIN
+	NOSUPERUSER
+	NOCREATEDB
+	NOCREATEROLE
+	INHERIT
+	NOREPLICATION
+	CONNECTION LIMIT -1
+	PASSWORD 'xxxxxx';
+
+CREATE DATABASE cars
+    WITH 
+    OWNER = "Aladin"
+    ENCODING = 'UTF8'
+    LC_COLLATE = 'English_United Kingdom.1250'
+    LC_CTYPE = 'English_United Kingdom.1250'
+    TABLESPACE = pg_default
+    CONNECTION LIMIT = -1;
