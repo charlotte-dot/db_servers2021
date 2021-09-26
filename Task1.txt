@@ -1,0 +1,157 @@
+-- Role: "Aladin"
+-- DROP ROLE "Aladin";
+
+CREATE ROLE "Aladin" WITH
+  LOGIN
+  NOSUPERUSER
+  INHERIT
+  NOCREATEDB
+  NOCREATEROLE
+  NOREPLICATION
+  ENCRYPTED PASSWORD 'SCRAM-SHA-256$4096:s3qRMzt1ZI+4ZFj9OJktAQ==$tuxwSeo+F0xwKI2AWFLhRcHzQKwGvd8E2ZurYoMKR44=:KDRjXUZUSrOxfygSnZU0YX9tf5tOY1JooL4BjaGkWmY=';
+
+-- Database: cars
+
+-- DROP DATABASE cars;
+
+CREATE DATABASE cars
+    WITH 
+    OWNER = "Aladin"
+    ENCODING = 'UTF8'
+    LC_COLLATE = 'English_United Kingdom.1250'
+    LC_CTYPE = 'English_United Kingdom.1250'
+    TABLESPACE = pg_default
+    CONNECTION LIMIT = -1;
+
+-- Table: public.human
+
+-- DROP TABLE public.human;
+
+CREATE TABLE IF NOT EXISTS public.human
+(
+    id integer NOT NULL DEFAULT nextval('serial1'::regclass),
+    name character varying(50) COLLATE pg_catalog."default",
+    surname character varying(45) COLLATE pg_catalog."default",
+    CONSTRAINT human_pkey PRIMARY KEY (id)
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE public.human
+    OWNER to "Aladin";
+
+-- Trigger: checking
+
+-- DROP TRIGGER checking ON public.human;
+
+CREATE TRIGGER checking
+    AFTER INSERT OR DELETE OR UPDATE 
+    ON public.human
+    FOR EACH ROW
+    EXECUTE FUNCTION public.log_all();
+
+-- Table: public.boy
+
+-- DROP TABLE public.boy;
+
+CREATE TABLE IF NOT EXISTS public.boy
+(
+    -- Inherited from table public.human: id integer NOT NULL DEFAULT nextval('serial1'::regclass),
+    -- Inherited from table public.human: name character varying(50) COLLATE pg_catalog."default",
+    -- Inherited from table public.human: surname character varying(45) COLLATE pg_catalog."default",
+    weight numeric(10,2),
+    height numeric(10,2),
+    "bornDate" date,
+    CONSTRAINT boy_pkey PRIMARY KEY (id)
+)
+    INHERITS (public.human)
+TABLESPACE pg_default;
+
+ALTER TABLE public.boy
+    OWNER to "Aladin";
+
+-- Table: public.girl
+
+-- DROP TABLE public.girl;
+
+CREATE TABLE IF NOT EXISTS public.girl
+(
+    -- Inherited from table public.human: id integer NOT NULL DEFAULT nextval('serial1'::regclass),
+    -- Inherited from table public.human: name character varying(50) COLLATE pg_catalog."default",
+    -- Inherited from table public.human: surname character varying(45) COLLATE pg_catalog."default",
+    skin character varying(40) COLLATE pg_catalog."default",
+    "eyeColor" character varying(8) COLLATE pg_catalog."default",
+    age integer,
+    CONSTRAINT girl_pkey PRIMARY KEY (id)
+)
+    INHERITS (public.human)
+TABLESPACE pg_default;
+
+ALTER TABLE public.girl
+    OWNER to "Aladin";
+
+-- Trigger: checkinggirl
+
+-- DROP TRIGGER checkinggirl ON public.girl;
+
+CREATE TRIGGER checkinggirl
+    AFTER INSERT OR DELETE OR UPDATE 
+    ON public.girl
+    FOR EACH ROW
+    EXECUTE FUNCTION public.log_all();
+
+-- Table: public.logs
+
+-- DROP TABLE public.logs;
+
+CREATE TABLE IF NOT EXISTS public.logs
+(
+    "logId" integer NOT NULL DEFAULT nextval('"logs_logId_seq"'::regclass),
+    "logUser" character varying(50) COLLATE pg_catalog."default",
+    "logOperation" character varying(200) COLLATE pg_catalog."default",
+    "logData" character varying(255) COLLATE pg_catalog."default",
+    "tableLog" character varying(200) COLLATE pg_catalog."default",
+    CONSTRAINT logs_pkey PRIMARY KEY ("logId")
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE public.logs
+    OWNER to postgres;
+
+-- FUNCTION: public.log_all()
+
+-- DROP FUNCTION public.log_all();
+
+CREATE OR REPLACE FUNCTION public.log_all()
+    RETURNS trigger
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE NOT LEAKPROOF
+AS $BODY$
+BEGIN
+IF (TG_OP = 'DELETE') THEN
+INSERT INTO public.logs(
+"logUser", "logOperation", "logData", "tableLog")
+VALUES (CURRENT_USER, TG_OP, row_to_json(OLD.*), TG_TABLE_NAME);
+RETURN OLD;
+ELSEIF (TG_OP='UPDATE') THEN
+INSERT INTO public.logs(
+"logUser", "logOperation", "logData")
+VALUES (CURRENT_USER, TG_OP, (row_to_json(OLD.*)::TEXT) || (row_to_json(NEW.*)::TEXT));
+RETURN OLD;
+ELSEIF (TG_OP='INSERT') THEN
+INSERT INTO public.logs(
+"logUser", "logOperation", "logData")
+VALUES (CURRENT_USER, TG_OP, row_to_json(NEW.*));
+RETURN NEW;
+END IF;
+RETURN NULL;
+END;
+$BODY$;
+
+ALTER FUNCTION public.log_all()
+    OWNER TO postgres;
+
+
+
